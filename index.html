@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Capture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap');
+
+  :root {
+    --bg: #f5f2eb;
+    --surface: #faf8f3;
+    --border: #e0d9cc;
+    --text: #1a1714;
+    --muted: #8a8178;
+    --accent: #c85a2a;
+    --accent-light: #f5ede7;
+    --prospect: #2a6b8a;
+    --prospect-light: #e7f0f5;
+    --task: #4a7c3f;
+    --task-light: #eaf2e8;
+    --idea: #7a4a8a;
+    --idea-light: #f2eaf5;
+    --reminder: #c85a2a;
+    --reminder-light: #f5ede7;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+    font-size: 13px;
+  }
+
+  /* HEADER */
+  header {
+    background: var(--text);
+    color: var(--bg);
+    padding: 14px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  header h1 {
+    font-family: 'Instrument Serif', serif;
+    font-size: 22px;
+    letter-spacing: -0.5px;
+  }
+
+  .header-date {
+    color: #a09888;
+    font-size: 11px;
+  }
+
+  /* LAYOUT */
+  .container {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 20px 16px 80px;
+  }
+
+  /* QUICK CAPTURE BAR */
+  .capture-bar {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    margin-bottom: 20px;
+  }
+
+  .capture-bar textarea {
+    width: 100%;
+    border: none;
+    background: transparent;
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text);
+    resize: none;
+    outline: none;
+    min-height: 40px;
+    line-height: 1.6;
+  }
+
+  .capture-bar textarea::placeholder { color: var(--muted); }
+
+  .capture-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+    flex-wrap: wrap;
+  }
+
+  .type-btn {
+    padding: 5px 12px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+
+  .type-btn:hover { border-color: var(--text); color: var(--text); }
+  .type-btn.active[data-type="prospect"] { background: var(--prospect-light); border-color: var(--prospect); color: var(--prospect); }
+  .type-btn.active[data-type="task"] { background: var(--task-light); border-color: var(--task); color: var(--task); }
+  .type-btn.active[data-type="idea"] { background: var(--idea-light); border-color: var(--idea); color: var(--idea); }
+  .type-btn.active[data-type="reminder"] { background: var(--reminder-light); border-color: var(--reminder); color: var(--reminder); }
+
+  .capture-actions {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .img-label {
+    cursor: pointer;
+    color: var(--muted);
+    font-size: 11px;
+    padding: 5px 10px;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    transition: all 0.15s;
+  }
+  .img-label:hover { color: var(--text); border-color: var(--text); }
+  #imageInput { display: none; }
+
+  .save-btn {
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .save-btn:hover { opacity: 0.8; }
+
+  .reminder-row {
+    display: none;
+    margin-top: 8px;
+    gap: 8px;
+    align-items: center;
+  }
+  .reminder-row.show { display: flex; }
+  .reminder-row input {
+    border: 1.5px solid var(--border);
+    background: transparent;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    outline: none;
+  }
+  .reminder-row label { color: var(--muted); font-size: 11px; }
+
+  /* IMAGE PREVIEW */
+  .img-preview {
+    display: none;
+    margin-top: 8px;
+    position: relative;
+    max-width: 200px;
+  }
+  .img-preview img { width: 100%; border-radius: 6px; border: 1px solid var(--border); }
+  .img-preview .remove-img {
+    position: absolute;
+    top: 4px; right: 4px;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: 50%;
+    width: 18px; height: 18px;
+    font-size: 10px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* FILTERS */
+  .filters {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+
+  .filter-btn {
+    padding: 4px 12px;
+    border-radius: 20px;
+    border: 1.5px solid var(--border);
+    background: transparent;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .filter-btn.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+
+  .search-input {
+    margin-left: auto;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    color: var(--text);
+    outline: none;
+    width: 160px;
+  }
+  .search-input::placeholder { color: var(--muted); }
+
+  /* CARDS */
+  .cards { display: flex; flex-direction: column; gap: 8px; }
+
+  .card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: 10px;
+    padding: 14px;
+    display: flex;
+    gap: 12px;
+    animation: fadeIn 0.2s ease;
+    position: relative;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+  .card-accent {
+    width: 3px;
+    border-radius: 2px;
+    flex-shrink: 0;
+    align-self: stretch;
+  }
+  .card[data-type="prospect"] .card-accent { background: var(--prospect); }
+  .card[data-type="task"] .card-accent { background: var(--task); }
+  .card[data-type="idea"] .card-accent { background: var(--idea); }
+  .card[data-type="reminder"] .card-accent { background: var(--reminder); }
+
+  .card-body { flex: 1; min-width: 0; }
+
+  .card-meta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+
+  .card-type {
+    font-size: 10px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 2px 7px;
+    border-radius: 10px;
+  }
+  .card[data-type="prospect"] .card-type { background: var(--prospect-light); color: var(--prospect); }
+  .card[data-type="task"] .card-type { background: var(--task-light); color: var(--task); }
+  .card[data-type="idea"] .card-type { background: var(--idea-light); color: var(--idea); }
+  .card[data-type="reminder"] .card-type { background: var(--reminder-light); color: var(--reminder); }
+
+  .card-time { color: var(--muted); font-size: 10px; margin-left: auto; }
+
+  .card-text {
+    color: var(--text);
+    line-height: 1.6;
+    word-break: break-word;
+    white-space: pre-wrap;
+  }
+
+  .card-img { margin-top: 8px; max-width: 180px; border-radius: 6px; border: 1px solid var(--border); }
+
+  .card-reminder-badge {
+    margin-top: 6px;
+    font-size: 10px;
+    color: var(--reminder);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .card-done, .card-delete {
+    background: none;
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 10px;
+    cursor: pointer;
+    font-family: 'DM Mono', monospace;
+    color: var(--muted);
+    transition: all 0.15s;
+  }
+  .card-done:hover { background: var(--task-light); color: var(--task); border-color: var(--task); }
+  .card-delete:hover { background: #fdecea; color: #c0392b; border-color: #c0392b; }
+
+  .card.done { opacity: 0.45; }
+  .card.done .card-text { text-decoration: line-through; }
+
+  /* EMPTY STATE */
+  .empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 40px 20px;
+    font-size: 12px;
+    line-height: 2;
+  }
+
+  /* DAILY SUMMARY */
+  .summary-bar {
+    background: var(--text);
+    color: var(--bg);
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+    display: flex;
+    gap: 20px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .summary-stat { text-align: center; }
+  .summary-stat .num { font-family: 'Instrument Serif', serif; font-size: 24px; }
+  .summary-stat .label { font-size: 10px; color: #a09888; text-transform: uppercase; letter-spacing: 0.5px; }
+  .summary-title { font-family: 'Instrument Serif', serif; font-size: 16px; margin-right: auto; }
+
+  .eod-btn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 11px;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .eod-btn:hover { opacity: 0.85; }
+
+  /* EOD MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(26,23,20,0.6);
+    z-index: 200;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 24px;
+    max-width: 500px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    border: 1.5px solid var(--border);
+  }
+  .modal h2 { font-family: 'Instrument Serif', serif; font-size: 20px; margin-bottom: 4px; }
+  .modal .modal-date { color: var(--muted); font-size: 11px; margin-bottom: 16px; }
+  .modal-section { margin-bottom: 16px; }
+  .modal-section h3 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 8px; }
+  .modal-item { padding: 8px 0; border-bottom: 1px solid var(--border); font-size: 12px; line-height: 1.5; }
+  .modal-item:last-child { border-bottom: none; }
+  .modal-close {
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    margin-top: 8px;
+    width: 100%;
+  }
+
+  /* NOTIFICATION */
+  .notif {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    background: var(--text);
+    color: var(--bg);
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 12px;
+    z-index: 300;
+    animation: slideUp 0.2s ease;
+    display: none;
+  }
+  @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+
+  /* REMINDER ALERT */
+  .reminder-alert {
+    position: fixed;
+    top: 60px;
+    right: 16px;
+    background: var(--reminder);
+    color: white;
+    padding: 12px 16px;
+    border-radius: 10px;
+    font-size: 12px;
+    z-index: 300;
+    max-width: 280px;
+    display: none;
+    line-height: 1.5;
+  }
+  .reminder-alert.show { display: block; }
+  .reminder-alert strong { display: block; margin-bottom: 4px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .dismiss-btn { background: rgba(255,255,255,0.2); border: none; color: white; padding: 4px 10px; border-radius: 4px; font-size: 10px; cursor: pointer; margin-top: 8px; font-family: 'DM Mono', monospace; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Capture</h1>
+  <span class="header-date" id="headerDate"></span>
+</header>
+
+<div class="container">
+
+  <!-- SUMMARY BAR -->
+  <div class="summary-bar">
+    <span class="summary-title">Today</span>
+    <div class="summary-stat"><div class="num" id="statProspect">0</div><div class="label">Prospects</div></div>
+    <div class="summary-stat"><div class="num" id="statTask">0</div><div class="label">Tasks</div></div>
+    <div class="summary-stat"><div class="num" id="statIdea">0</div><div class="label">Ideas</div></div>
+    <div class="summary-stat"><div class="num" id="statReminder">0</div><div class="label">Reminders</div></div>
+    <button class="eod-btn" onclick="showEOD()">End of Day Summary</button>
+  </div>
+
+  <!-- CAPTURE BAR -->
+  <div class="capture-bar">
+    <textarea id="captureText" placeholder="Drop anything here — a name, a thought, a to-do, a prospect..." rows="2"></textarea>
+    
+    <div class="img-preview" id="imgPreview">
+      <img id="previewImg" src="" alt="preview">
+      <button class="remove-img" onclick="removeImage()">✕</button>
+    </div>
+
+    <div class="capture-controls">
+      <button class="type-btn active" data-type="prospect" onclick="setType('prospect')">Prospect</button>
+      <button class="type-btn" data-type="task" onclick="setType('task')">Task</button>
+      <button class="type-btn" data-type="idea" onclick="setType('idea')">Idea</button>
+      <button class="type-btn" data-type="reminder" onclick="setType('reminder')">Reminder</button>
+      
+      <div class="capture-actions">
+        <label class="img-label" for="imageInput">+ Image</label>
+        <input type="file" id="imageInput" accept="image/*" onchange="handleImage(this)">
+        <button class="save-btn" onclick="saveCapture()">Save ↵</button>
+      </div>
+    </div>
+
+    <div class="reminder-row" id="reminderRow">
+      <label>Remind me:</label>
+      <input type="datetime-local" id="reminderTime">
+    </div>
+  </div>
+
+  <!-- FILTERS -->
+  <div class="filters">
+    <button class="filter-btn active" onclick="setFilter('all')">All</button>
+    <button class="filter-btn" onclick="setFilter('prospect')">Prospects</button>
+    <button class="filter-btn" onclick="setFilter('task')">Tasks</button>
+    <button class="filter-btn" onclick="setFilter('idea')">Ideas</button>
+    <button class="filter-btn" onclick="setFilter('reminder')">Reminders</button>
+    <button class="filter-btn" onclick="setFilter('done')">Done</button>
+    <input class="search-input" type="text" placeholder="Search..." oninput="renderCards()">
+  </div>
+
+  <!-- CARDS -->
+  <div class="cards" id="cards"></div>
+  <div class="empty" id="empty" style="display:none">Nothing here yet.<br>Drop something above to get started.</div>
+
+</div>
+
+<!-- EOD MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <h2>End of Day</h2>
+    <div class="modal-date" id="modalDate"></div>
+    <div id="modalContent"></div>
+    <button class="modal-close" onclick="document.getElementById('modalOverlay').classList.remove('show')">Close</button>
+  </div>
+</div>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif"></div>
+
+<!-- REMINDER ALERT -->
+<div class="reminder-alert" id="reminderAlert">
+  <strong>⏰ Reminder</strong>
+  <span id="reminderAlertText"></span>
+  <br>
+  <button class="dismiss-btn" onclick="dismissReminder()">Dismiss</button>
+</div>
+
+<script>
+  let captures = JSON.parse(localStorage.getItem('captures') || '[]');
+  let selectedType = 'prospect';
+  let currentFilter = 'all';
+  let currentImageData = null;
+  let pendingReminderDismiss = null;
+
+  // Init
+  document.getElementById('headerDate').textContent = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric' });
+  document.getElementById('modalDate').textContent = new Date().toLocaleDateString('en-US', { weekday:'long', month:'long', day:'numeric', year:'numeric' });
+
+  // Enter to save
+  document.getElementById('captureText').addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); saveCapture(); }
+  });
+
+  function setType(type) {
+    selectedType = type;
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+    document.getElementById('reminderRow').classList.toggle('show', type === 'reminder');
+  }
+
+  function handleImage(input) {
+    const file = input.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      currentImageData = e.target.result;
+      document.getElementById('previewImg').src = currentImageData;
+      document.getElementById('imgPreview').style.display = 'block';
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removeImage() {
+    currentImageData = null;
+    document.getElementById('imgPreview').style.display = 'none';
+    document.getElementById('imageInput').value = '';
+  }
+
+  function saveCapture() {
+    const text = document.getElementById('captureText').value.trim();
+    if (!text && !currentImageData) return;
+
+    const reminderTime = selectedType === 'reminder' ? document.getElementById('reminderTime').value : null;
+
+    const item = {
+      id: Date.now(),
+      type: selectedType,
+      text,
+      image: currentImageData,
+      timestamp: new Date().toISOString(),
+      reminderTime,
+      done: false
+    };
+
+    captures.unshift(item);
+    save();
+
+    document.getElementById('captureText').value = '';
+    removeImage();
+    document.getElementById('reminderTime').value = '';
+    document.getElementById('captureText').focus();
+
+    showNotif('Saved!');
+    renderCards();
+    updateStats();
+
+    if (reminderTime) scheduleReminder(item);
+  }
+
+  function setFilter(f) {
+    currentFilter = f;
+    document.querySelectorAll('.filter-btn').forEach(b => b.classList.toggle('active', b.textContent.toLowerCase().replace(' ','') === f || (f === 'all' && b.textContent === 'All') || (f==='done' && b.textContent==='Done')));
+    renderCards();
+  }
+
+  function renderCards() {
+    const search = document.querySelector('.search-input').value.toLowerCase();
+    let filtered = captures.filter(c => {
+      if (currentFilter === 'done') return c.done;
+      if (currentFilter !== 'all' && c.type !== currentFilter) return false;
+      if (!c.done && currentFilter !== 'done') {}
+      if (search && !c.text.toLowerCase().includes(search)) return false;
+      return true;
+    });
+
+    const container = document.getElementById('cards');
+    const empty = document.getElementById('empty');
+
+    if (filtered.length === 0) {
+      container.innerHTML = '';
+      empty.style.display = 'block';
+      return;
+    }
+    empty.style.display = 'none';
+
+    container.innerHTML = filtered.map(c => `
+      <div class="card ${c.done ? 'done' : ''}" data-type="${c.type}" data-id="${c.id}">
+        <div class="card-accent"></div>
+        <div class="card-body">
+          <div class="card-meta">
+            <span class="card-type">${c.type}</span>
+            <span class="card-time">${formatTime(c.timestamp)}</span>
+          </div>
+          ${c.text ? `<div class="card-text">${escapeHtml(c.text)}</div>` : ''}
+          ${c.image ? `<img class="card-img" src="${c.image}" alt="screenshot">` : ''}
+          ${c.reminderTime ? `<div class="card-reminder-badge">⏰ ${formatReminder(c.reminderTime)}</div>` : ''}
+        </div>
+        <div class="card-actions">
+          <button class="card-done" onclick="toggleDone(${c.id})">${c.done ? 'Undo' : 'Done'}</button>
+          <button class="card-delete" onclick="deleteCard(${c.id})">Del</button>
+        </div>
+      </div>
+    `).join('');
+  }
+
+  function toggleDone(id) {
+    const c = captures.find(x => x.id === id);
+    if (c) { c.done = !c.done; save(); renderCards(); updateStats(); }
+  }
+
+  function deleteCard(id) {
+    captures = captures.filter(x => x.id !== id);
+    save(); renderCards(); updateStats();
+  }
+
+  function updateStats() {
+    const today = new Date().toDateString();
+    const todayItems = captures.filter(c => new Date(c.timestamp).toDateString() === today);
+    ['prospect','task','idea','reminder'].forEach(t => {
+      document.getElementById('stat' + t.charAt(0).toUpperCase() + t.slice(1)).textContent = todayItems.filter(c => c.type === t).length;
+    });
+  }
+
+  function showEOD() {
+    const today = new Date().toDateString();
+    const todayItems = captures.filter(c => new Date(c.timestamp).toDateString() === today);
+    const types = ['prospect','task','idea','reminder'];
+    let html = '';
+    types.forEach(t => {
+      const items = todayItems.filter(c => c.type === t);
+      if (items.length === 0) return;
+      html += `<div class="modal-section">
+        <h3>${t}s (${items.length})</h3>
+        ${items.map(c => `<div class="modal-item">${c.done ? '✓ ' : ''}${escapeHtml(c.text) || '[image]'}</div>`).join('')}
+      </div>`;
+    });
+    if (!html) html = '<p style="color:var(--muted);font-size:12px;">Nothing captured today yet.</p>';
+    document.getElementById('modalContent').innerHTML = html;
+    document.getElementById('modalOverlay').classList.add('show');
+  }
+
+  function closeModal(e) {
+    if (e.target === document.getElementById('modalOverlay')) {
+      document.getElementById('modalOverlay').classList.remove('show');
+    }
+  }
+
+  function scheduleReminder(item) {
+    const reminderMs = new Date(item.reminderTime).getTime() - Date.now();
+    if (reminderMs > 0 && reminderMs < 86400000 * 7) {
+      setTimeout(() => {
+        pendingReminderDismiss = item.id;
+        document.getElementById('reminderAlertText').textContent = item.text || 'You have a reminder.';
+        document.getElementById('reminderAlert').classList.add('show');
+      }, reminderMs);
+    }
+  }
+
+  function dismissReminder() {
+    document.getElementById('reminderAlert').classList.remove('show');
+  }
+
+  function showNotif(msg) {
+    const n = document.getElementById('notif');
+    n.textContent = msg;
+    n.style.display = 'block';
+    setTimeout(() => n.style.display = 'none', 1500);
+  }
+
+  function formatTime(iso) {
+    const d = new Date(iso);
+    return d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  }
+
+  function formatReminder(dt) {
+    return new Date(dt).toLocaleString('en-US', { month:'short', day:'numeric', hour:'numeric', minute:'2-digit' });
+  }
+
+  function escapeHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  function save() {
+    localStorage.setItem('captures', JSON.stringify(captures));
+  }
+
+  // Check existing reminders on load
+  captures.forEach(c => {
+    if (c.reminderTime && !c.done) {
+      const ms = new Date(c.reminderTime).getTime() - Date.now();
+      if (ms > 0) scheduleReminder(c);
+    }
+  });
+
+  renderCards();
+  updateStats();
+</script>
+</body>
+</html>
